@@ -11,5 +11,5 @@ einops==0.6.1
 #xformers==0.0.20
 itsdangerous==2.1.2
 bitsandbytes==0.39.0
-pandas==1.1.5
 uvicorn
+python-multipart
