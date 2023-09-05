@@ -14,6 +14,13 @@ from transformers import AutoTokenizer
 import torch
 import os
 import re
+import boto3
+from langchain.llms.bedrock import Bedrock
+from dotenv import load_dotenv
+
+load_dotenv()
+aws_access_key_id=os.environ.get("aws_access_key_id")
+aws_secret_access_key=os.environ.get("aws_secret_access_key")
 
 class PdfQA:
     def __init__(self,config:dict = {}):
@@ -207,6 +214,40 @@ class PdfQA:
           # Use ChatGPT API
           self.qa = RetrievalQA.from_chain_type(llm=OpenAI(model_name=LLM_OPENAI_GPT35, temperature=0.), chain_type="stuff",\
                                       retriever=self.vectordb.as_retriever(search_kwargs={"score_threshold": .95,"k":1}))
+
+        elif self.config["llm"]==LLM_CLAUDE:
+            bedrock = boto3.client(
+            service_name='bedrock',
+            region_name='us-west-2',
+            endpoint_url='https://bedrock.us-west-2.amazonaws.com',
+            aws_access_key_id=aws_access_key_id, 
+            aws_secret_access_key=aws_secret_access_key,
+            )
+            llm = Bedrock(model_id="anthropic.claude-v1", client=bedrock, model_kwargs={'max_tokens_to_sample':300})
+            self.qa = RetrievalQA.from_chain_type(
+            llm=llm,
+             chain_type="stuff",
+                retriever=self.vectordb.as_retriever(search_kwargs={"score_threshold": .95,"k":1}),
+            
+            )
+            question_t5_template = """
+                Given the following extracted parts of a long document and a question, create a final answer with references ("SOURCES").
+                If you don't know the answer, just say that you don't know. Don't try to make up an answer.
+                ALWAYS return a "SOURCES" part in your answer.
+                context: {context}
+                question: {question}
+                answer: 
+                """
+            QUESTION_T5_PROMPT = PromptTemplate(
+                    template=question_t5_template, input_variables=["context", "question"]
+            )
+            self.qa.combine_documents_chain.llm_chain.prompt = QUESTION_T5_PROMPT
+            self.qa.combine_documents_chain.verbose = False
+            self.qa.return_source_documents = False
+
+
+
+
         else:
             hf_llm = HuggingFacePipeline(pipeline=self.llm,model_id=self.config["llm"])
 

@@ -1,8 +1,9 @@
 from api.pdf_q_a import PdfQA
-
+import os
 
 def pdf_to_qna(payload):
     # Initialize PDFQA
+    os.environ["OPENAI_API_KEY"]=payload["openai_api_key"]
     config = {"persist_directory":None,
           "load_in_8bit":False,
           "embedding" : payload['embedding_name'],

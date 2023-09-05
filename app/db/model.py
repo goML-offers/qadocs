@@ -7,3 +7,4 @@ class Pdfqna(BaseModel):
     embedding_name: str
     question:str
     rag: bool
+    openai_api_key: str
